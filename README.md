@@ -14,7 +14,7 @@ Instead of using Python or TensorFlow, this version is written from scratch in *
     g++ main.cpp -o perceptron
     ./perceptron
 
-Why I built this
+### Why I built this
 
 I’m currently learning C++ and exploring machine learning fundamentals, and this project helped me understand how a neural network actually learns under the hood.
 
