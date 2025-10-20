@@ -2,10 +2,8 @@
 
 This little project is inspired by **Frank Rosenblatt’s 1958 Perceptron**, one of the very first machine learning models in history.
 
-Instead of using Python or TensorFlow, this version is written from scratch in **C++**- just pure math, logic, and a dash of curiosity.
-
 ### What it does
-- Learns to classify points as being on the **left** or **right** side (like Rosenblatt’s shape cards!)
+- Learns to classify points as being on the **left** or **right** side (like Rosenblatt’s shape cards)
 - Adjusts its own weights with each epoch
 - Prints its progress so you can *see* learning happen 
 
