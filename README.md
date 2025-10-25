@@ -17,3 +17,5 @@ This little project is inspired by **Frank Rosenblatt’s 1958 Perceptron**, one
 I’m currently learning C++ and exploring machine learning fundamentals, and this project helped me understand how a neural network actually learns under the hood.
 
 If you like this, feel free to fork it and tweak the dataset or logic.
+
+This project is still under development
