@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Perceptron Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #1e1e2e;
+    --accent: #7fffb2;
+    --accent2: #ff6b6b;
+    --accent3: #6bc5ff;
+    --text: #e8e8f0;
+    --muted: #5a5a7a;
+    --glow: rgba(127,255,178,0.15);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -40%;
+    left: -20%;
+    width: 70vw;
+    height: 70vw;
+    background: radial-gradient(circle, rgba(127,255,178,0.04) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--accent);
+    text-shadow: 0 0 40px rgba(127,255,178,0.3);
+    position: relative;
+    z-index: 1;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    margin-top: 6px;
+    text-transform: uppercase;
+    position: relative; z-index: 1;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    width: 100%;
+    max-width: 1100px;
+    margin-top: 32px;
+    position: relative; z-index: 1;
+  }
+
+  @media (max-width: 800px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.4;
+  }
+
+  canvas {
+    width: 100%;
+    border-radius: 8px;
+    display: block;
+    background: #0d0d14;
+    cursor: crosshair;
+  }
+
+  .section-label {
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .controls { display: flex; flex-direction: column; gap: 20px; }
+
+  .ctrl-group { display: flex; flex-direction: column; gap: 8px; }
+
+  .ctrl-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .ctrl-label span { color: var(--accent); font-weight: 700; }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--glow);
+  }
+
+  .btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  .btn:hover { background: var(--glow); box-shadow: 0 0 20px var(--glow); }
+  .btn.primary { background: var(--accent); color: #0a0a0f; font-weight: 700; }
+  .btn.primary:hover { box-shadow: 0 0 30px rgba(127,255,178,0.4); }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .btn { flex: 1; }
+
+  .epoch-display {
+    background: #0d0d14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+  }
+
+  .epoch-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    text-shadow: 0 0 20px rgba(127,255,178,0.4);
+  }
+
+  .epoch-sub { font-size: 0.6rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+
+  .error-bar-wrap {
+    background: #0d0d14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+
+  .error-chart { height: 80px; display: flex; align-items: flex-end; gap: 3px; margin-top: 10px; }
+
+  .error-bar {
+    flex: 1;
+    background: var(--accent2);
+    border-radius: 3px 3px 0 0;
+    transition: height 0.3s ease;
+    min-height: 2px;
+    opacity: 0.8;
+  }
+
+  .weights-display {
+    background: #0d0d14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 0.7rem;
+    line-height: 2;
+  }
+
+  .w-row { display: flex; justify-content: space-between; }
+  .w-label { color: var(--muted); }
+  .w-val { color: var(--accent3); font-weight: 700; }
+
+  .legend { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; color: var(--muted); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  .status-pill {
+    display: inline-block;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: var(--border);
+    color: var(--muted);
+    margin-bottom: 12px;
+    transition: all 0.3s;
+  }
+  .status-pill.training { background: rgba(127,255,178,0.15); color: var(--accent); }
+  .status-pill.done { background: rgba(107,197,255,0.15); color: var(--accent3); }
+
+  .hint {
+    font-size: 0.62rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+  }
+</style>
+</head>
+<body>
+
+<h1>PERCEPTRON</h1>
+<p class="subtitle">Live Training Visualizer</p>
+
+<div class="layout">
+  <!-- Canvas -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="section-label">Decision Boundary</div>
+      <div class="status-pill" id="statusPill">idle</div>
+    </div>
+    <canvas id="canvas" height="460"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="dot" style="background:#ff6b6b"></div>Class 0 (Left)</div>
+      <div class="legend-item"><div class="dot" style="background:#7fffb2"></div>Class 1 (Right)</div>
+      <div class="legend-item"><div class="dot" style="background:#6bc5ff;border-radius:0;width:18px;height:2px;"></div>Decision Boundary</div>
+    </div>
+    <p class="hint">Click on the canvas to add your own data points (alternates between class 0 / class 1)</p>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+
+    <div class="card">
+      <div class="section-label">Epoch Progress</div>
+      <div class="epoch-display">
+        <div class="epoch-num" id="epochNum">0</div>
+        <div class="epoch-sub">/ <span id="epochTotal">20</span> epochs</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Parameters</div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">Learning Rate <span id="lrVal">0.10</span></div>
+        <input type="range" id="lrSlider" min="0.01" max="0.5" step="0.01" value="0.1"/>
+      </div>
+      <div class="ctrl-group" style="margin-top:14px">
+        <div class="ctrl-label">Epochs <span id="epVal">20</span></div>
+        <input type="range" id="epSlider" min="5" max="50" step="1" value="20"/>
+      </div>
+      <div class="ctrl-group" style="margin-top:14px">
+        <div class="ctrl-label">Animation Speed <span id="spdVal">fast</span></div>
+        <input type="range" id="spdSlider" min="1" max="5" step="1" value="4"/>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Actions</div>
+      <button class="btn primary" id="trainBtn">▶ Start Training</button>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn" id="resetBtn">↺ Reset</button>
+        <button class="btn" id="clearBtn">✕ Clear Points</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Error per Epoch</div>
+      <div class="error-bar-wrap">
+        <div class="error-chart" id="errorChart"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Learned Weights</div>
+      <div class="weights-display" id="weightsDisplay">
+        <div class="w-row"><span class="w-label">w₁</span><span class="w-val" id="w1">—</span></div>
+        <div class="w-row"><span class="w-label">w₂</span><span class="w-val" id="w2">—</span></div>
+        <div class="w-row"><span class="w-label">bias</span><span class="w-val" id="wb">—</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Perceptron ──────────────────────────────────────────────────────────────
+class Perceptron {
+  constructor(lr = 0.1) {
+    this.lr = lr;
+    this.w = [Math.random()*2-1, Math.random()*2-1];
+    this.b = 0;
+  }
+  predict([x, y]) {
+    return (this.w[0]*x + this.w[1]*y + this.b >= 0) ? 1 : 0;
+  }
+  trainEpoch(data, labels) {
+    let errors = 0;
+    for (let i = 0; i < data.length; i++) {
+      const pred = this.predict(data[i]);
+      const err = labels[i] - pred;
+      this.w[0] += this.lr * err * data[i][0];
+      this.w[1] += this.lr * err * data[i][1];
+      this.b    += this.lr * err;
+      errors += Math.abs(err);
+    }
+    return errors;
+  }
+}
+
+// ── State ───────────────────────────────────────────────────────────────────
+const defaultData = [[-2,1],[-1,-1],[1,2],[2,-1],[-1.5,0.5],[1.5,-0.5]];
+const defaultLabels = [0, 0, 1, 1, 0, 1];
+
+let data = [...defaultData.map(d=>[...d])];
+let labels = [...defaultLabels];
+let perc = new Perceptron(0.1);
+let epochErrors = [];
+let currentEpoch = 0;
+let totalEpochs = 20;
+let animTimer = null;
+let isTraining = false;
+let nextClickClass = 0;
+
+// ── Canvas ──────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width - 48;
+  canvas.height = 460;
+  draw();
+}
+
+// World → canvas coords (world range -3..3)
+function toCanvas(wx, wy) {
+  const pad = 40;
+  const W = canvas.width, H = canvas.height;
+  const x = pad + (wx + 3) / 6 * (W - 2*pad);
+  const y = H - pad - (wy + 3) / 6 * (H - 2*pad);
+  return [x, y];
+}
+function toWorld(cx, cy) {
+  const pad = 40;
+  const W = canvas.width, H = canvas.height;
+  const wx = (cx - pad) / (W - 2*pad) * 6 - 3;
+  const wy = (H - cy - pad) / (H - 2*pad) * 6 - 3;
+  return [wx, wy];
+}
+
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Background grid
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 1;
+  for (let gx = -3; gx <= 3; gx++) {
+    const [cx] = toCanvas(gx, 0);
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+  }
+  for (let gy = -3; gy <= 3; gy++) {
+    const [, cy] = toCanvas(0, gy);
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = '#2a2a3e';
+  ctx.lineWidth = 1.5;
+  const [ax] = toCanvas(0, 0); const [, ay] = toCanvas(0, 0);
+  ctx.beginPath(); ctx.moveTo(ax, 0); ctx.lineTo(ax, H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, ay); ctx.lineTo(W, ay); ctx.stroke();
+
+  // Shaded regions if we have weights
+  if (perc.w[1] !== 0 || perc.w[0] !== 0) {
+    const steps = 80;
+    const cellW = W / steps, cellH = H / steps;
+    for (let i = 0; i < steps; i++) {
+      for (let j = 0; j < steps; j++) {
+        const [wx, wy] = toWorld(i * cellW + cellW/2, j * cellH + cellH/2);
+        const pred = perc.predict([wx, wy]);
+        ctx.fillStyle = pred === 1
+          ? 'rgba(127,255,178,0.04)'
+          : 'rgba(255,107,107,0.04)';
+        ctx.fillRect(i * cellW, j * cellH, cellW+1, cellH+1);
+      }
+    }
+
+    // Decision boundary line
+    // w0*x + w1*y + b = 0  =>  y = -(w0*x + b) / w1
+    ctx.strokeStyle = '#6bc5ff';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.shadowColor = '#6bc5ff';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    let started = false;
+    for (let gx = -4; gx <= 4; gx += 0.05) {
+      let gy;
+      if (Math.abs(perc.w[1]) > 1e-6) {
+        gy = -(perc.w[0]*gx + perc.b) / perc.w[1];
+      } else {
+        continue;
+      }
+      const [cx, cy] = toCanvas(gx, gy);
+      if (!started) { ctx.moveTo(cx, cy); started = true; }
+      else ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
+  }
+
+  // Data points
+  for (let i = 0; i < data.length; i++) {
+    const [cx, cy] = toCanvas(data[i][0], data[i][1]);
+    const correct = perc.predict(data[i]) === labels[i];
+    const color = labels[i] === 1 ? '#7fffb2' : '#ff6b6b';
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.85;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Ring if misclassified
+    if (!correct && currentEpoch > 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+}
+
+// ── UI Updates ───────────────────────────────────────────────────────────────
+function updateWeightsDisplay() {
+  document.getElementById('w1').textContent = perc.w[0].toFixed(4);
+  document.getElementById('w2').textContent = perc.w[1].toFixed(4);
+  document.getElementById('wb').textContent = perc.b.toFixed(4);
+}
+
+function updateErrorChart() {
+  const chart = document.getElementById('errorChart');
+  chart.innerHTML = '';
+  const maxErr = Math.max(...epochErrors, 1);
+  epochErrors.forEach(e => {
+    const bar = document.createElement('div');
+    bar.className = 'error-bar';
+    bar.style.height = (e / maxErr * 100) + '%';
+    bar.title = `Errors: ${e}`;
+    chart.appendChild(bar);
+  });
+}
+
+function setStatus(s) {
+  const pill = document.getElementById('statusPill');
+  pill.textContent = s;
+  pill.className = 'status-pill ' + (s === 'training' ? 'training' : s === 'done' ? 'done' : '');
+}
+
+// ── Training Animation ───────────────────────────────────────────────────────
+const speedMap = { 1: 800, 2: 500, 3: 300, 4: 120, 5: 30 };
+
+function startTraining() {
+  if (isTraining) return;
+  isTraining = true;
+  currentEpoch = 0;
+  epochErrors = [];
+  perc = new Perceptron(parseFloat(document.getElementById('lrSlider').value));
+  totalEpochs = parseInt(document.getElementById('epSlider').value);
+  document.getElementById('epochTotal').textContent = totalEpochs;
+  document.getElementById('trainBtn').disabled = true;
+  setStatus('training');
+
+  function step() {
+    if (currentEpoch >= totalEpochs) {
+      isTraining = false;
+      document.getElementById('trainBtn').disabled = false;
+      setStatus('done');
+      return;
+    }
+    const errs = perc.trainEpoch(data, labels);
+    currentEpoch++;
+    epochErrors.push(errs);
+    document.getElementById('epochNum').textContent = currentEpoch;
+    updateWeightsDisplay();
+    updateErrorChart();
+    draw();
+
+    const speed = parseInt(document.getElementById('spdSlider').value);
+    animTimer = setTimeout(step, speedMap[speed]);
+  }
+  step();
+}
+
+function resetAll() {
+  clearTimeout(animTimer);
+  isTraining = false;
+  data = [...defaultData.map(d=>[...d])];
+  labels = [...defaultLabels];
+  perc = new Perceptron(0.1);
+  currentEpoch = 0;
+  epochErrors = [];
+  document.getElementById('epochNum').textContent = '0';
+  document.getElementById('w1').textContent = '—';
+  document.getElementById('w2').textContent = '—';
+  document.getElementById('wb').textContent = '—';
+  document.getElementById('errorChart').innerHTML = '';
+  document.getElementById('trainBtn').disabled = false;
+  setStatus('idle');
+  draw();
+}
+
+function clearPoints() {
+  clearTimeout(animTimer);
+  isTraining = false;
+  data = [];
+  labels = [];
+  perc = new Perceptron(0.1);
+  currentEpoch = 0;
+  epochErrors = [];
+  document.getElementById('epochNum').textContent = '0';
+  document.getElementById('w1').textContent = '—';
+  document.getElementById('w2').textContent = '—';
+  document.getElementById('wb').textContent = '—';
+  document.getElementById('errorChart').innerHTML = '';
+  document.getElementById('trainBtn').disabled = false;
+  setStatus('idle');
+  nextClickClass = 0;
+  draw();
+}
+
+// ── Sliders ──────────────────────────────────────────────────────────────────
+document.getElementById('lrSlider').addEventListener('input', e => {
+  document.getElementById('lrVal').textContent = parseFloat(e.target.value).toFixed(2);
+});
+document.getElementById('epSlider').addEventListener('input', e => {
+  document.getElementById('epVal').textContent = e.target.value;
+  document.getElementById('epochTotal').textContent = e.target.value;
+});
+const spdLabels = {1:'very slow', 2:'slow', 3:'medium', 4:'fast', 5:'turbo'};
+document.getElementById('spdSlider').addEventListener('input', e => {
+  document.getElementById('spdVal').textContent = spdLabels[e.target.value];
+});
+
+// ── Canvas click to add point ────────────────────────────────────────────────
+canvas.addEventListener('click', e => {
+  if (isTraining) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const cx = (e.clientX - rect.left) * scaleX;
+  const cy = (e.clientY - rect.top) * scaleY;
+  const [wx, wy] = toWorld(cx, cy);
+  data.push([wx, wy]);
+  labels.push(nextClickClass);
+  nextClickClass = 1 - nextClickClass;
+  draw();
+});
+
+// ── Buttons ──────────────────────────────────────────────────────────────────
+document.getElementById('trainBtn').addEventListener('click', startTraining);
+document.getElementById('resetBtn').addEventListener('click', resetAll);
+document.getElementById('clearBtn').addEventListener('click', clearPoints);
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+draw();
+</script>
+</body>
+</html>

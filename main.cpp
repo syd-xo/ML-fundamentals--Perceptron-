@@ -1,6 +1,9 @@
 #include <iostream>
 #include <vector>
-#include <cstdlib>
+#include <random>
+#include <ctime>
+#include <stdexcept>
+
 
 using namespace std;
 
@@ -12,21 +15,36 @@ private:
     double learning_rate;       // Controls how much weights are adjusted per iteration
 
 public:
+
     // Constructor: initializes weights and learning rate
     Perceptron(int input_size, double lr = 0.1) {
         learning_rate = lr;
         bias = 0.0;
+        
+        // Random number generator
+        mt19937 rng(static_cast<unsigned int>(time(0))); 
+
+        // Distribution for weights between -1 and 1
+        uniform_real_distribution<double> dist(-1.0, 1.0); 
+
         // Initialize random weights between -1 and 1
         for (int i = 0; i < input_size; ++i)
-            weights.push_back((double(rand()) / RAND_MAX) * 2 - 1);
+            weights.push_back(dist(rng));
     }
 
     // Predicts the output (0 or 1) given a vector of inputs
     int predict(const vector<double>& inputs) {
+
+        // input validation
+        if (inputs.size() != weights.size())
+            throw invalid_argument("Input size does not match weight size.");
+        
         double sum = bias;
+        
         // Compute the weighted sum of inputs
         for (size_t i = 0; i < weights.size(); ++i)
             sum += weights[i] * inputs[i];
+
         // Apply the step activation function
         return (sum >= 0) ? 1 : 0;
     }
@@ -35,6 +53,11 @@ public:
     void train(const vector<vector<double>>& training_data,
                const vector<int>& labels,
                int epochs = 20) {
+
+                // validate training data and labels
+                if (training_data.size() != labels.size())  
+                    throw invalid_argument("Training data and labels size mismatch.");
+        
         // Repeat the training process for a number of epochs
         for (int e = 0; e < epochs; ++e) {
             int total_errors = 0;
@@ -70,8 +93,6 @@ public:
 };
 
 int main() {
-    srand(time(0)); // Seed for random weight initialization
-
     // Training data:
     // Each item is (x, y) followed by its label
     // Label 0 = "left side", Label 1 = "right side"
@@ -83,22 +104,27 @@ int main() {
     // Create a perceptron with 2 inputs and a learning rate of 0.1
     Perceptron p(2, 0.1);
 
-    // Train the perceptron for 15 epochs
-    p.train(data, labels, 15);
+    try {
+        // Train the perceptron for 15 epochs
+        p.train(data, labels, 15);
 
-    // Display the final learned weights and bias
-    p.showWeights();
+        // Display the final learned weights and bias
+        p.showWeights();
 
-    // Test the perceptron with new unseen points
-    cout << "\n--- Testing ---" << endl;
-    vector<vector<double>> tests = {
-        {-2, -1},
-        {2, 2},
-        {0.5, -0.5}
-    };
+        // Test the perceptron with new unseen points
+        cout << "\n--- Testing ---" << endl;
+        vector<vector<double>> tests = {
+            {-2, -1},
+            {2, 2},
+            {0.5, -0.5}
+        };
 
-    // Predict and display the classification for each test point
-    for (auto& t : tests)
-        cout << "(" << t[0] << ", " << t[1] << ") => "
-             << (p.predict(t) ? "Right" : "Left") << endl;
+        // Predict and display the classification for each test point
+        for (auto& t : tests)
+            cout << "(" << t[0] << ", " << t[1] << ") => "
+                << (p.predict(t) ? "Right" : "Left") << endl;
+    } catch (const invalid_argument& e) {
+        cerr << "Error: " << e.what() << endl;
+    }
 }
+
